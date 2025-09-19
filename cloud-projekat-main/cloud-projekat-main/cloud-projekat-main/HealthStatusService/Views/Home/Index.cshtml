@@ -1,0 +1,212 @@
+﻿@model HealthStatusService.Controllers.HealthStatusViewModel
+
+@{
+    ViewBag.Title = "Status dostupnosti servisa";
+}
+
+<div class="jumbotron">
+    <h1>Health Status Service</h1>
+    <p class="lead">Monitoring dostupnosti Movie Discussion Forum servisa</p>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-danger">
+        <strong>Greška:</strong> @ViewBag.Error
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3>Ukupan pregled dostupnosti</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4>Ukupna dostupnost</h4>
+                            <div class="progress" style="height: 30px;">
+                                <div class="progress-bar @(Model.OverallAvailability >= 90 ? "bg-success" : Model.OverallAvailability >= 70 ? "bg-warning" : "bg-danger")" 
+                                     role="progressbar" 
+                                     style="width: @Model.OverallAvailability%; line-height: 30px; font-size: 16px; font-weight: bold;">
+                                    @Model.OverallAvailability.ToString("F1")%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4>Ukupno provera</h4>
+                            <h2 class="text-primary">@Model.TotalChecks</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4>Vremenski period</h4>
+                            <p class="text-muted">@Model.TimeRange</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.ServiceStats != null && Model.ServiceStats.Any())
+{
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Status po servisima</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Servis</th>
+                                    <th>Ukupno provera</th>
+                                    <th>Uspešno</th>
+                                    <th>Neuspešno</th>
+                                    <th>Dostupnost</th>
+                                    <th>Poslednja provera</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var service in Model.ServiceStats)
+                                {
+                                    <tr>
+                                        <td><strong>@service.ServiceName</strong></td>
+                                        <td>@service.TotalChecks</td>
+                                        <td class="text-success">@service.SuccessfulChecks</td>
+                                        <td class="text-danger">@service.FailedChecks</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar @(service.AvailabilityPercentage >= 90 ? "bg-success" : service.AvailabilityPercentage >= 70 ? "bg-warning" : "bg-danger")" 
+                                                                       role="progressbar" 
+                                                                       style="width: @service.AvailabilityPercentage%; line-height: 20px;">
+                                                    @service.AvailabilityPercentage.ToString("F1")%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@service.LastCheck.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                                        <td>
+                                            <span class="badge @(service.LastStatus == "OK" ? "bg-success" : "bg-danger")">
+                                                @service.LastStatus
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Grafički prikaz dostupnosti</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="healthChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <p>Nema podataka o statusu servisa za prikaz.</p>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Učitaj podatke za grafik
+            $.get('@Url.Action("GetHealthData")', function (data) {
+                if (data.error) {
+                    console.error('Greška prilikom učitavanja podataka:', data.error);
+                    return;
+                }
+
+                // Pripremi podatke za grafik
+                var labels = data.map(function (item) {
+                    return new Date(item.Time).toLocaleTimeString('sr-RS', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                });
+
+                var datasets = [];
+                var services = ['MovieDiscussionService', 'NotificationService'];
+                var colors = ['#007bff', '#28a745'];
+
+                services.forEach(function (service, index) {
+                    var serviceData = data.map(function (item) {
+                        var serviceItem = item.Services.find(function (s) { return s.ServiceName === service; });
+                        return serviceItem ? (serviceItem.Status === 'OK' ? 1 : 0) : 0;
+                    });
+
+                    datasets.push({
+                        label: service,
+                        data: serviceData,
+                        borderColor: colors[index],
+                        backgroundColor: colors[index] + '20',
+                        fill: false,
+                        tension: 0.1
+                    });
+                });
+
+                // Kreiraj grafik
+                var ctx = document.getElementById('healthChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 1,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function (value) {
+                                        return value === 1 ? 'OK' : 'NOT_OK';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Status dostupnosti servisa u realnom vremenu'
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Automatsko osvežavanje podataka svakih 30 sekundi
+            setInterval(function () {
+                location.reload();
+            }, 30000);
+        });
+    </script>
+}

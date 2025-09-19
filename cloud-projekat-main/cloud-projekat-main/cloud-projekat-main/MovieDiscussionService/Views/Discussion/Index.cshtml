@@ -1,0 +1,213 @@
+﻿@{
+    ViewBag.Title = "Diskusije o filmovima";
+}
+
+<div class="container" style="margin-top: 20px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🎬 @ViewBag.Message</h2>
+        @if (Request.IsAuthenticated)
+        {
+            <a href="@Url.Action("Create", "Discussion")" class="btn btn-success btn-lg">
+                ➕ Nova diskusija
+            </a>
+        }
+    </div>
+
+    <!-- Search and Filter Panel -->
+    <div class="card mb-4" style="border-radius: 15px;">
+        <div class="card-header" style="background: linear-gradient(45deg, #007bff, #0056b3); color: white; border-radius: 15px 15px 0 0;">
+            <h5 class="mb-0">🔍 Pretraga i filteri</h5>
+        </div>
+        <div class="card-body">
+            @using (Html.BeginForm("Index", "Discussion", FormMethod.Get))
+            {
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="searchTerm" class="form-label fw-bold">Pretraga:</label>
+                            <input type="text" name="searchTerm" id="searchTerm" value="@ViewBag.SearchTerm" 
+                                   class="form-control" placeholder="Naziv filma, žanr ili sinopsis...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="genre" class="form-label fw-bold">Žanr:</label>
+                            <select name="genre" id="genre" class="form-control">
+                                <option value="">-- Svi žanrovi --</option>
+                                <option value="Drama" @(ViewBag.Genre == "Drama" ? "selected" : "")>Drama</option>
+                                <option value="Komedija" @(ViewBag.Genre == "Komedija" ? "selected" : "")>Komedija</option>
+                                <option value="Akcija" @(ViewBag.Genre == "Akcija" ? "selected" : "")>Akcija</option>
+                                <option value="Horor" @(ViewBag.Genre == "Horor" ? "selected" : "")>Horor</option>
+                                <option value="Sci-Fi" @(ViewBag.Genre == "Sci-Fi" ? "selected" : "")>Sci-Fi</option>
+                                <option value="Triler" @(ViewBag.Genre == "Triler" ? "selected" : "")>Triler</option>
+                                <option value="Romantika" @(ViewBag.Genre == "Romantika" ? "selected" : "")>Romantika</option>
+                                <option value="Animacija" @(ViewBag.Genre == "Animacija" ? "selected" : "")>Animacija</option>
+                                <option value="Dokumentarac" @(ViewBag.Genre == "Dokumentarac" ? "selected" : "")>Dokumentarac</option>
+                                <option value="Ostalo" @(ViewBag.Genre == "Ostalo" ? "selected" : "")>Ostalo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="sortBy" class="form-label fw-bold">Sortiranje:</label>
+                            <select name="sortBy" id="sortBy" class="form-control">
+                                <option value="date" @(ViewBag.SortBy == "date" ? "selected" : "")>Najnovije</option>
+                                <option value="title" @(ViewBag.SortBy == "title" ? "selected" : "")>Naziv (A-Z)</option>
+                                <option value="rating" @(ViewBag.SortBy == "rating" ? "selected" : "")>IMDB ocena</option>
+                                <option value="year" @(ViewBag.SortBy == "year" ? "selected" : "")>Godina</option>
+                                <option value="positive" @(ViewBag.SortBy == "positive" ? "selected" : "")>Pozitivni glasovi</option>
+                                <option value="negative" @(ViewBag.SortBy == "negative" ? "selected" : "")>Negativni glasovi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                🔍 Pretraži
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!Request.IsAuthenticated)
+    {
+        <div class="alert alert-info">
+            <strong>💡 Napomena:</strong> <a href="@Url.Action("Login", "Account")">Prijavite se</a> da biste mogli da kreirate nove diskusije i ostavljate komentare.
+        </div>
+    }
+
+    <!-- Results Summary -->
+    @if (ViewBag.Discussions != null)
+    {
+        var discussions = (IEnumerable<object>)ViewBag.Discussions;
+        <div class="alert alert-info">
+            <strong>📊 Rezultati:</strong> Pronađeno <strong>@discussions.Count()</strong> diskusija 
+            @if (ViewBag.DataSource != null)
+            {
+                <span class="float-end"><small>Izvor: @ViewBag.DataSource</small></span>
+            }
+        </div>
+    }
+
+    <!-- Discussions List -->
+    <div class="row">
+        @if (ViewBag.Discussions != null && ((IEnumerable<object>)ViewBag.Discussions).Any())
+        {
+            foreach (var discussion in ViewBag.Discussions)
+            {
+                <div class="col-md-12 mb-4">
+                    <div class="card shadow-sm" style="border-radius: 15px; border-left: 4px solid #007bff;">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="card-title">
+                                        <a href="@Url.Action("Details", "Discussion", new { id = ((dynamic)discussion).Id })" 
+                                           style="text-decoration: none; color: #007bff;">
+                                            🎬 @(((dynamic)discussion).Title)
+                                        </a>
+                                    </h5>
+                                    <p class="card-text">
+                                        <span class="badge bg-primary me-2">@(((dynamic)discussion).Genre)</span>
+                                        <span class="badge bg-secondary me-2">@(((dynamic)discussion).Year)</span>
+                                        <span class="badge bg-warning text-dark">⭐ @(((dynamic)discussion).ImdbRating)</span>
+                                    </p>
+                                    <p class="card-text text-muted">
+                                        @if (!string.IsNullOrEmpty(((dynamic)discussion).Synopsis))
+                                        {
+                                            var synopsis = ((dynamic)discussion).Synopsis.ToString();
+                                            @(synopsis.Length > 150 ? synopsis.Substring(0, 150) + "..." : synopsis)
+                                        }
+                                    </p>
+                                    <small class="text-muted">
+                                        <strong>👤 Autor:</strong> @(((dynamic)discussion).Author) | 
+                                        <strong>📅 Datum:</strong> @(((dynamic)discussion).Date)
+                                    </small>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center mb-3">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="text-success">
+                                                    <strong>👍 @(((dynamic)discussion).Positive)</strong>
+                                                    <br><small>Pozitivno</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-danger">
+                                                    <strong>👎 @(((dynamic)discussion).Negative)</strong>
+                                                    <br><small>Negativno</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <a href="@Url.Action("Details", "Discussion", new { id = ((dynamic)discussion).Id })" 
+                                           class="btn btn-primary btn-lg w-100">
+                                            📖 Pogledaj diskusiju
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <h4>😔 Nema diskusija</h4>
+                    <p>
+                        @if (!string.IsNullOrEmpty(ViewBag.SearchTerm) || !string.IsNullOrEmpty(ViewBag.Genre))
+                        {
+                            <span>Nema diskusija koje odgovaraju vašoj pretrazi.</span>
+                        }
+                        else
+                        {
+                            <span>Trenutno nema aktivnih diskusija. Budite prvi koji će pokrenuti diskusiju!</span>
+                        }
+                    </p>
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="alert alert-danger mt-2">
+                            <strong>⚠️ Greška:</strong> @ViewBag.Error
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Navigation -->
+    <div class="text-center mt-4">
+        <a href="@Url.Action("Index", "Home")" class="btn btn-secondary btn-lg">← Nazad na početnu</a>
+        @if (Request.IsAuthenticated)
+        {
+            <a href="@Url.Action("Create", "Discussion")" class="btn btn-success btn-lg ms-2">➕ Nova diskusija</a>
+        }
+    </div>
+</div>
+
+<style>
+    .card:hover { 
+        transform: translateY(-2px); 
+        transition: all 0.3s; 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+    }
+    .card-title a:hover { 
+        color: #0056b3 !important; 
+        text-decoration: underline !important;
+    }
+    .form-control:focus { 
+        border-color: #007bff; 
+        box-shadow: 0 0 5px rgba(0,123,255,0.3); 
+    }
+    .badge {
+        font-size: 0.75em;
+    }
+</style>

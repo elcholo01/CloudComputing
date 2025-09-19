@@ -1,0 +1,131 @@
+﻿@model MovieDiscussionService.Controllers.RegisterViewModel
+@{
+    ViewBag.Title = "Registracija";
+}
+
+<div class="container" style="margin-top: 30px;">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-lg" style="border-radius: 15px;">
+                <div class="card-header text-center" style="background: linear-gradient(45deg, #28a745, #20c997); color: white; border-radius: 15px 15px 0 0;">
+                    <h3>🎬 Registracija za Movie Discussion Forum</h3>
+                    <small>Podaci se čuvaju u Azure Storage</small>
+                </div>
+                <div class="card-body" style="padding: 30px;">
+                    @using (Html.BeginForm("Register", "Account", FormMethod.Post, new { @class = "form-horizontal" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        
+                        @Html.ValidationSummary(true, "", new { @class = "alert alert-danger" })
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.FullName, new { @class = "form-label fw-bold" })
+                                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", @placeholder = "Marko Petrović" })
+                                    @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.Gender, new { @class = "form-label fw-bold" })
+                                    @Html.DropDownListFor(m => m.Gender, new SelectList(new[] { 
+                                        "Muški", "Ženski", "Ostalo" 
+                                    }), "-- Izaberite pol --", new { @class = "form-control" })
+                                    @Html.ValidationMessageFor(m => m.Gender, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.Country, new { @class = "form-label fw-bold" })
+                                    @Html.TextBoxFor(m => m.Country, new { @class = "form-control", @placeholder = "Srbija" })
+                                    @Html.ValidationMessageFor(m => m.Country, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.City, new { @class = "form-label fw-bold" })
+                                    @Html.TextBoxFor(m => m.City, new { @class = "form-control", @placeholder = "Beograd" })
+                                    @Html.ValidationMessageFor(m => m.City, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.Address, new { @class = "form-label fw-bold" })
+                                    @Html.TextBoxFor(m => m.Address, new { @class = "form-control", @placeholder = "Knez Mihailova 1" })
+                                    @Html.ValidationMessageFor(m => m.Address, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.Email, new { @class = "form-label fw-bold" })
+                                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control", @placeholder = "marko@example.com", @type = "email" })
+                                    @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.PhotoUrl, new { @class = "form-label fw-bold" })
+                                    @Html.TextBoxFor(m => m.PhotoUrl, new { @class = "form-control", @placeholder = "https://example.com/avatar.jpg" })
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.Password, new { @class = "form-label fw-bold" })
+                                    @Html.PasswordFor(m => m.Password, new { @class = "form-control", @placeholder = "Minimalno 6 karaktera" })
+                                    @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    @Html.LabelFor(m => m.ConfirmPassword, new { @class = "form-label fw-bold" })
+                                    @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", @placeholder = "Ponovite lozinku" })
+                                    @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>🔐 Azure Storage:</strong> Vaši podaci će biti sigurno sačuvani u Azure Table Storage i vidljivi u Azure Storage Explorer-u.
+                        </div>
+
+                        <div class="form-group text-center mt-4">
+                            <button type="submit" class="btn btn-success btn-lg me-3" style="border-radius: 25px; padding: 12px 30px;">
+                                💾 Registruj se u Azure Storage
+                            </button>
+                            <a href="@Url.Action("Login", "Account")" class="btn btn-secondary btn-lg" style="border-radius: 25px; padding: 12px 30px;">
+                                ← Nazad na prijavu
+                            </a>
+                        </div>
+                    }
+
+                    <div class="text-center mt-3">
+                        <p>Već imate nalog? <a href="@Url.Action("Login", "Account")">Prijavite se ovde</a></p>
+                        <p><a href="@Url.Action("Index", "Home")">Nazad na početnu</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus { 
+        border-color: #28a745; 
+        box-shadow: 0 0 5px rgba(40,167,69,0.3); 
+    }
+    .btn-success:hover { 
+        background-color: #218838; 
+        transform: translateY(-1px);
+        transition: all 0.3s;
+    }
+</style>

@@ -1,0 +1,85 @@
+﻿@model MovieDiscussionService.Controllers.EditDiscussionViewModel
+
+@{
+    ViewBag.Title = "Izmeni diskusiju";
+}
+
+<h2>Izmeni diskusiju o filmu</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        
+        <div class="form-group">
+            @Html.LabelFor(model => model.MovieTitle, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.MovieTitle, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.MovieTitle, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Year, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Year, new { htmlAttributes = new { @class = "form-control", type = "number", min = "1888", max = "2100" } })
+                @Html.ValidationMessageFor(model => model.Year, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Genre, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(model => model.Genre, new SelectList(Model.Genres ?? new List<string>(), Model.Genre), "Izaberite žanr", new { @class = "form-control" })
+                @Html.ValidationMessageFor(model => model.Genre, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.ImdbRating, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.ImdbRating, new { htmlAttributes = new { @class = "form-control", type = "number", step = "0.1", min = "0", max = "10" } })
+                @Html.ValidationMessageFor(model => model.ImdbRating, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Synopsis, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextAreaFor(model => model.Synopsis, new { @class = "form-control", rows = "4" })
+                @Html.ValidationMessageFor(model => model.Synopsis, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.DurationMin, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.DurationMin, new { htmlAttributes = new { @class = "form-control", type = "number", min = "1", max = "600" } })
+                @Html.ValidationMessageFor(model => model.DurationMin, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.PosterUrl, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.PosterUrl, new { htmlAttributes = new { @class = "form-control", placeholder = "https://example.com/poster.jpg" } })
+                @Html.ValidationMessageFor(model => model.PosterUrl, "", new { @class = "text-danger" })
+                <small class="form-text text-muted">Unesite URL slike postera filma (opciono)</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Sačuvaj promene" class="btn btn-primary" />
+                @Html.ActionLink("Nazad na detalje", "Details", new { id = Model.Id }, new { @class = "btn btn-secondary" })
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}

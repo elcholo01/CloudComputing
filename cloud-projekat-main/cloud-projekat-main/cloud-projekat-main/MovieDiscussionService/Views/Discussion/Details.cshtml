@@ -1,0 +1,113 @@
+﻿@{
+    ViewBag.Title = "Detalji diskusije";
+}
+
+<div class="container" style="margin-top: 20px;">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h2>🎬 @ViewBag.DiscussionTitle</h2>
+            <small>Autor: <strong>@ViewBag.Author</strong></small>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <h5>Sadržaj diskusije:</h5>
+                <p class="lead">@ViewBag.Content</p>
+            </div>
+
+            <hr />
+
+            <div class="mb-4">
+                <h5>💬 Komentari:</h5>
+                @if (ViewBag.Comments != null)
+                {
+                    var comments = ViewBag.Comments as List<MovieDiscussionService.Models.CommentViewModel>;
+                    if (comments != null)
+                    {
+                        foreach (var comment in comments)
+                        {
+                            <div class="card mb-3" style="border-left: 4px solid #007bff;">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>@comment.Author</strong>
+                                        <small class="text-muted">@comment.Date</small>
+                                    </div>
+                                    <p class="mt-2">@comment.Text</p>
+                                </div>
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <p>Nema komentara. Budite prvi koji će ostaviti komentar!</p>
+                    </div>
+                }
+            </div>
+
+            @if (Request.IsAuthenticated)
+            {
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Ostavite komentar:</h6>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                @using (Html.BeginForm("Follow", "Discussion", FormMethod.Post, new { @class = "d-inline" }))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="discussionId" value="@ViewBag.DiscussionId" />
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">📧 Prati diskusiju</button>
+                                }
+                            </div>
+                        </div>
+                        @using (Html.BeginForm("AddComment", "Discussion", FormMethod.Post))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="discussionId" value="@ViewBag.DiscussionId" />
+                            <div class="mb-3">
+                                <textarea name="commentText" class="form-control" rows="3" placeholder="Unesite vaš komentar..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">Dodaj komentar</button>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <strong>Napomena:</strong> <a href="@Url.Action("Login", "Account")">Prijavite se</a> da biste mogli da ostavljate komentare.
+                </div>
+            }
+        </div>
+        <div class="card-footer">
+            <div class="row">
+                <div class="col-md-6">
+                    <a href="@Url.Action("Index", "Discussion")" class="btn btn-secondary">
+                        ← Nazad na diskusije
+                    </a>
+                </div>
+                @if (Request.IsAuthenticated)
+                {
+                    <div class="col-md-6 text-end">
+                        @using (Html.BeginForm("Vote", "Discussion", FormMethod.Post, new { @class = "d-inline" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="discussionId" value="@ViewBag.DiscussionId" />
+                            <input type="hidden" name="voteType" value="positive" />
+                            <button type="submit" class="btn btn-outline-success me-2">👍 Pozitivno</button>
+                        }
+                        @using (Html.BeginForm("Vote", "Discussion", FormMethod.Post, new { @class = "d-inline" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="discussionId" value="@ViewBag.DiscussionId" />
+                            <input type="hidden" name="voteType" value="negative" />
+                            <button type="submit" class="btn btn-outline-danger">👎 Negativno</button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

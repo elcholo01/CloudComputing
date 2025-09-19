@@ -1,0 +1,51 @@
+﻿@{
+    ViewBag.Title = "Početna";
+}
+
+<div class="jumbotron bg-white p-5 rounded shadow">
+    <h1 class="display-4 text-center">🎬 Dobrodošli u Movie Discussion Forum!</h1>
+    <p class="lead text-center">Mesto gde možete diskutovati o filmovima, ocenjivati ih i deliti mišljenja.</p>
+    <hr class="my-4">
+    
+    <div class="text-center">
+        @if (Request.IsAuthenticated)
+        {
+            <p class="mb-4">Dobrodošli, <strong>@User.Identity.Name</strong>!</p>
+            <a class="btn btn-primary btn-lg me-2" href="@Url.Action("Index", "Discussion")">Pogledajte diskusije</a>
+            <a class="btn btn-success btn-lg" href="@Url.Action("Create", "Discussion")">Kreirajte diskusiju</a>
+        }
+        else
+        {
+            <p class="mb-4">Molimo prijavite se da biste pristupili svim funkcionalnostima.</p>
+            <a class="btn btn-primary btn-lg me-2" href="@Url.Action("Login", "Account")">Prijavite se</a>
+            <a class="btn btn-secondary btn-lg" href="@Url.Action("Register", "Account")">Registrujte se</a>
+        }
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3>🎬 Diskusije</h3>
+                <p>Učestvujte u diskusijama o najnovijim filmovima.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3>⭐ Ocenjivanje</h3>
+                <p>Ocenite filmove i pomozite drugim korisnicima.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h3>👥 Zajednica</h3>
+                <p>Povežite se sa ljubiteljima filma.</p>
+            </div>
+        </div>
+    </div>
+</div>

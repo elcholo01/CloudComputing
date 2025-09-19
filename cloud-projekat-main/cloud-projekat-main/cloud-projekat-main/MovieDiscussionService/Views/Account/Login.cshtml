@@ -1,0 +1,51 @@
+﻿@model MovieDiscussionService.Controllers.LoginViewModel
+@{
+    ViewBag.Title = "Prijava";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h3>🎬 Prijava</h3>
+            </div>
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Login", "Account", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+                    
+                    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                    <div class="mb-3">
+                        @Html.LabelFor(m => m.Email, new { @class = "form-label" })
+                        @Html.TextBoxFor(m => m.Email, new { @class = "form-control", @placeholder = "primer@email.com", @type = "email" })
+                        @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="mb-3">
+                        @Html.LabelFor(m => m.Password, new { @class = "form-label" })
+                        @Html.PasswordFor(m => m.Password, new { @class = "form-control", @placeholder = "Unesite lozinku" })
+                        @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        @Html.CheckBoxFor(m => m.RememberMe, new { @class = "form-check-input" })
+                        @Html.LabelFor(m => m.RememberMe, new { @class = "form-check-label" })
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Prijavite se</button>
+                    </div>
+                }
+
+                <div class="text-center mt-3">
+                    <p>Nemate nalog? <a href="@Url.Action("Register", "Account")">Registrujte se ovde</a></p>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <strong>Za testiranje:</strong> Koristite bilo koji email i lozinku (npr. test@test.com / 123456)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
