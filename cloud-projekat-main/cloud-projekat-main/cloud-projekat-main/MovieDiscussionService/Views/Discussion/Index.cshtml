@@ -146,9 +146,24 @@
                                     </div>
                                     <div class="text-center">
                                         <a href="@Url.Action("Details", "Discussion", new { id = ((dynamic)discussion).Id })" 
-                                           class="btn btn-primary btn-lg w-100">
+                                           class="btn btn-primary btn-lg w-100 mb-2">
                                             📖 Pogledaj diskusiju
                                         </a>
+                                        
+                                        @if (Request.IsAuthenticated && ((dynamic)discussion).CreatorEmail == User.Identity.Name)
+                                        {
+                                            <div class="btn-group w-100" role="group">
+                                                <a href="@Url.Action("Edit", "Discussion", new { id = ((dynamic)discussion).Id })" 
+                                                   class="btn btn-warning btn-sm">
+                                                    ✏️ Izmeni
+                                                </a>
+                                                <a href="@Url.Action("Delete", "Discussion", new { id = ((dynamic)discussion).Id })" 
+                                                   class="btn btn-danger btn-sm"
+                                                   onclick="return confirm('Da li ste sigurni da želite da obrišete ovu diskusiju?')">
+                                                    🗑️ Obriši
+                                                </a>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             </div>

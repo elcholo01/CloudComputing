@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Common;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
-using AdminToolsConsoleApp;
 
 namespace AdminToolsConsoleApp
 {
@@ -105,7 +103,7 @@ namespace AdminToolsConsoleApp
                         Console.ReadKey();
                         break;
                     case "6":
-                        await FixUsersWithNullPasswords();
+                        await FixBrokenUsers();
                         Console.WriteLine("Pritisnite bilo koji taster...");
                         Console.ReadKey();
                         break;
@@ -519,7 +517,7 @@ namespace AdminToolsConsoleApp
                 string hashedPassword = HashPassword(testPassword);
 
                 // Kreiraj test korisnika sa ISPRAVNIM PasswordHash-om
-                var testUser = new Common.UserEntity(testEmail)
+                var testUser = new UserEntity(testEmail)
                 {
                     FullName = "Test Administrator",
                     Gender = "Muski",
@@ -563,87 +561,114 @@ namespace AdminToolsConsoleApp
             }
         }
 
-        private static async Task FixBrokenUserLogin()
+
+        private static async Task FixBrokenUsers()
         {
+            Console.Clear();
+            Console.WriteLine("=== POPRAVKA OŠTEĆENIH KORISNIKA ===");
+            Console.WriteLine();
+
             try
             {
-                Console.WriteLine("=== POPRAVKA KORISNIKA KOJI NE MOGU DA SE PRIJAVE ===");
-                Console.WriteLine();
-
-                // Učitaj sve korisnike
                 var query = new TableQuery<UserEntity>();
                 var result = await _usersTable.ExecuteQuerySegmentedAsync(query, null);
                 var users = result.Results.ToList();
 
-                Console.WriteLine($"Ukupno korisnika u tabeli: {users.Count}");
-                Console.WriteLine();
-
-                // Pronađi korisnike sa obrišenim lozinkama
                 var brokenUsers = users.Where(u => string.IsNullOrEmpty(u.PasswordHash)).ToList();
 
-                if (brokenUsers.Any())
+                if (!brokenUsers.Any())
                 {
-                    Console.WriteLine($"❌ Pronađeno {brokenUsers.Count} korisnika sa obrišenim lozinkama:");
-                    for (int i = 0; i < brokenUsers.Count; i++)
+                    Console.WriteLine("✅ Nema oštećenih korisnika - svi imaju PasswordHash!");
+                    return;
+                }
+
+                Console.WriteLine($"🔍 Pronađeno {brokenUsers.Count} korisnika bez PasswordHash:");
+                foreach (var user in brokenUsers)
+                {
+                    Console.WriteLine($"  - {user.FullName} ({user.RowKey})");
+                }
+
+                Console.WriteLine();
+                Console.Write("Da li želite da popravite ove korisnike? (da/ne): ");
+                var confirm = Console.ReadLine().ToLower();
+
+                if (confirm == "da" || confirm == "d")
+                {
+                    foreach (var user in brokenUsers)
                     {
-                        var user = brokenUsers[i];
-                        Console.WriteLine($"{i + 1}. {user.FullName} ({user.RowKey}) - Verifikovan: {(user.IsAuthorVerified ? "Da" : "Ne")}");
+                        Console.WriteLine($"🔧 Popravljam {user.FullName}...");
+                        
+                        // Postavi default lozinku
+                        var newPassword = "temp123"; // Korisnik će morati da promeni lozinku
+                        var hashedPassword = HashPassword(newPassword);
+                        
+                        user.PasswordHash = hashedPassword;
+                        
+                        var updateOperation = TableOperation.Replace(user);
+                        await _usersTable.ExecuteAsync(updateOperation);
+                        
+                        Console.WriteLine($"✅ {user.FullName} - nova lozinka: {newPassword}");
                     }
+                    
                     Console.WriteLine();
-
-                    Console.Write("Unesite broj korisnika kome želite da postavite novu lozinku: ");
-                    if (int.TryParse(Console.ReadLine(), out int choice) && choice > 0 && choice <= brokenUsers.Count)
-                    {
-                        var userToFix = brokenUsers[choice - 1];
-
-                        Console.WriteLine($"Popravka korisnika: {userToFix.FullName} ({userToFix.RowKey})");
-                        Console.Write("Unesite novu lozinku: ");
-                        var newPassword = Console.ReadLine();
-
-                        if (!string.IsNullOrEmpty(newPassword))
-                        {
-                            // Hashuj novu lozinku
-                            var hashedPassword = HashPassword(newPassword);
-
-                            // Ažuriraj korisnika samo sa novom lozinkom
-                            userToFix.PasswordHash = hashedPassword;
-
-                            var updateOperation = TableOperation.Replace(userToFix);
-                            await _usersTable.ExecuteAsync(updateOperation);
-
-                            Console.WriteLine();
-                            Console.WriteLine("✅ USPEŠNO POPRAVLJENO!");
-                            Console.WriteLine($"📧 Email: {userToFix.RowKey}");
-                            Console.WriteLine($"🔑 Nova lozinka: {newPassword}");
-                            Console.WriteLine($"👤 Ime: {userToFix.FullName}");
-                            Console.WriteLine($"✅ Verifikovan autor: {(userToFix.IsAuthorVerified ? "Da" : "Ne")}");
-                            Console.WriteLine();
-                            Console.WriteLine("Korisnik sada može da se prijavi sa novom lozinkom!");
-                        }
-                        else
-                        {
-                            Console.WriteLine("❌ Lozinka ne može biti prazna.");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("❌ Neispravan izbor.");
-                    }
+                    Console.WriteLine("🎉 Svi korisnici su popravljeni!");
+                    Console.WriteLine("⚠️  KORISNICI MORAJU DA PROMENE LOZINKU PRILIKOM PRVE PRIJAVE!");
                 }
                 else
                 {
-                    Console.WriteLine("✅ Svi korisnici imaju validne lozinke.");
+                    Console.WriteLine("❌ Popravka je otkazana.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Greška: {ex.Message}");
+            }
+        }
 
-                    // Prikaži korisnike sa validnim lozinkama
-                    if (users.Any())
+        private static async Task FixBrokenUserLogin()
+        {
+            Console.Clear();
+            Console.WriteLine("=== POPRAVKA LOGIN PROBLEMA ===");
+            Console.WriteLine();
+
+            try
+            {
+                var query = new TableQuery<UserEntity>();
+                var result = await _usersTable.ExecuteQuerySegmentedAsync(query, null);
+                var users = result.Results.ToList();
+
+                Console.WriteLine($"🔍 Pregledam {users.Count} korisnika...");
+                Console.WriteLine();
+
+                var fixedCount = 0;
+                foreach (var user in users)
+                {
+                    Console.WriteLine($"👤 {user.FullName} ({user.RowKey})");
+                    Console.WriteLine($"   🔐 PasswordHash: {(string.IsNullOrEmpty(user.PasswordHash) ? "❌ NEDOSTAJE" : "✅ OK")}");
+                    Console.WriteLine($"   ✅ Verifikovan: {(user.IsAuthorVerified ? "DA" : "NE")}");
+                    
+                    if (string.IsNullOrEmpty(user.PasswordHash))
                     {
-                        Console.WriteLine();
-                        Console.WriteLine("KORISNICI SA VALIDNIM LOZINKAMA:");
-                        foreach (var user in users)
-                        {
-                            Console.WriteLine($"✅ {user.FullName} ({user.RowKey}) - Verifikovan: {(user.IsAuthorVerified ? "Da" : "Ne")}");
-                        }
+                        Console.WriteLine("   🔧 Popravljam...");
+                        
+                        var newPassword = "temp123";
+                        var hashedPassword = HashPassword(newPassword);
+                        user.PasswordHash = hashedPassword;
+                        
+                        var updateOperation = TableOperation.Replace(user);
+                        await _usersTable.ExecuteAsync(updateOperation);
+                        
+                        Console.WriteLine($"   ✅ Nova lozinka: {newPassword}");
+                        fixedCount++;
                     }
+                    
+                    Console.WriteLine();
+                }
+
+                Console.WriteLine($"🎉 Popravljeno {fixedCount} korisnika!");
+                if (fixedCount > 0)
+                {
+                    Console.WriteLine("⚠️  KORISNICI MORAJU DA PROMENE LOZINKU PRILIKOM PRVE PRIJAVE!");
                 }
             }
             catch (Exception ex)

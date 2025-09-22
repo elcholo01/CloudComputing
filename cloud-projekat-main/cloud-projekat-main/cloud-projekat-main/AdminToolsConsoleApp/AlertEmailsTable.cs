@@ -1,4 +1,3 @@
-using Common;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
@@ -30,7 +29,11 @@ namespace AdminToolsConsoleApp
         {
             var res = _table.Execute(TableOperation.Retrieve<AlertEmailEntity>("AlertEmails", emailLower));
             if (res.Result is AlertEmailEntity e)
+            {
+                // Postavi ETag na "*" za brisanje
+                e.ETag = "*";
                 _table.Execute(TableOperation.Delete(e));
+            }
         }
     }
 }

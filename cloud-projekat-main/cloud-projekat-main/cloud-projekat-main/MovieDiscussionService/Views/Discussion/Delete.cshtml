@@ -16,9 +16,10 @@
     <strong>Genre:</strong> @Model.Genre<br />
 </div>
 
-@using (Html.BeginForm("Delete", "Discussion", FormMethod.Post, new { @class = "mt-3" }))
+@using (Html.BeginForm("DeleteConfirmed", "Discussion", FormMethod.Post, new { @class = "mt-3" }))
 {
     @Html.AntiForgeryToken()
+    @Html.Hidden("id", Model.RowKey)
     <button type="submit" class="btn btn-danger">Yes, Delete</button>
     <a href="@Url.Action("Index", "Discussion")" class="btn btn-secondary">Cancel</a>
 }

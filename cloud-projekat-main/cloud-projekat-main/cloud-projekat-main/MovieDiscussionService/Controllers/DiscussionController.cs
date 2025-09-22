@@ -130,7 +130,8 @@ namespace MovieDiscussionService.Controllers
                         ImdbRating = disc.ImdbRating,
                         Positive = disc.Positive,
                         Negative = disc.Negative,
-                        Synopsis = disc.Synopsis
+                        Synopsis = disc.Synopsis,
+                        CreatorEmail = disc.CreatorEmail
                     }).ToList();
                     
                     // Paginacija
@@ -153,9 +154,9 @@ namespace MovieDiscussionService.Controllers
                     // Fallback - simulirane diskusije
                     var allDiscussions = new List<DiscussionViewModel>
                     {
-                        new DiscussionViewModel { Title = "Najbolji filmovi 2024", Author = "marko@example.com", Date = "01.09.2024", Id = "1", Genre = "Drama", Year = 2024, ImdbRating = 8.5, Positive = 15, Negative = 2 },
-                        new DiscussionViewModel { Title = "Komentari o filmu Oppenheimer", Author = "ana@example.com", Date = "31.08.2024", Id = "2", Genre = "Drama", Year = 2023, ImdbRating = 8.8, Positive = 25, Negative = 1 },
-                        new DiscussionViewModel { Title = "Preporuke za horor filmove", Author = "petar@example.com", Date = "30.08.2024", Id = "3", Genre = "Horor", Year = 2024, ImdbRating = 7.2, Positive = 8, Negative = 5 }
+                        new DiscussionViewModel { Title = "Najbolji filmovi 2024", Author = "marko@example.com", Date = "01.09.2024", Id = "1", Genre = "Drama", Year = 2024, ImdbRating = 8.5, Positive = 15, Negative = 2, CreatorEmail = "marko@example.com" },
+                        new DiscussionViewModel { Title = "Komentari o filmu Oppenheimer", Author = "ana@example.com", Date = "31.08.2024", Id = "2", Genre = "Drama", Year = 2023, ImdbRating = 8.8, Positive = 25, Negative = 1, CreatorEmail = "ana@example.com" },
+                        new DiscussionViewModel { Title = "Preporuke za horor filmove", Author = "petar@example.com", Date = "30.08.2024", Id = "3", Genre = "Horor", Year = 2024, ImdbRating = 7.2, Positive = 8, Negative = 5, CreatorEmail = "petar@example.com" }
                     };
                     
                     // Paginacija za fallback
@@ -639,10 +640,59 @@ namespace MovieDiscussionService.Controllers
             return View(model);
         }
 
+        [HttpGet]
+        [Authorize]
+        public async Task<ActionResult> Delete(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                TempData["ErrorMessage"] = "Neispravan ID diskusije.";
+                return RedirectToAction("Index");
+            }
+
+            try
+            {
+                if (_discussionsTable != null)
+                {
+                    var retrieveOperation = TableOperation.Retrieve<DiscussionEntity>("Disc", id);
+                    var result = await _discussionsTable.ExecuteAsync(retrieveOperation);
+                    
+                    if (result.Result != null)
+                    {
+                        var discussion = result.Result as DiscussionEntity;
+                        
+                        // Proveri da li je korisnik vlasnik diskusije
+                        if (discussion.CreatorEmail != User.Identity.Name)
+                        {
+                            TempData["ErrorMessage"] = "Možete brisati samo svoje diskusije.";
+                            return RedirectToAction("Index");
+                        }
+
+                        return View(discussion);
+                    }
+                    else
+                    {
+                        TempData["ErrorMessage"] = "Diskusija nije pronađena.";
+                        return RedirectToAction("Index");
+                    }
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Greška pri pristupu bazi podataka.";
+                    return RedirectToAction("Index");
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Greška pri učitavanju diskusije: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
+
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Delete(string id)
+        public async Task<ActionResult> DeleteConfirmed(string id)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -759,5 +809,6 @@ namespace MovieDiscussionService.Controllers
         public int Positive { get; set; }
         public int Negative { get; set; }
         public string Synopsis { get; set; }
+        public string CreatorEmail { get; set; }
     }
 }

@@ -33,9 +33,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Common">
-      <HintPath>..\Common\bin\Debug\Common.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -57,18 +54,14 @@
     <Compile Include="AlertEmailsTable.cs" />
     <Compile Include="AuthorVerifier.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Storage.cs" />
+    <Compile Include="UserEntity.cs" />
     <Compile Include="UsersTable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Common\Common.csproj">
-      <Project>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</Project>
-      <Name>Common</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

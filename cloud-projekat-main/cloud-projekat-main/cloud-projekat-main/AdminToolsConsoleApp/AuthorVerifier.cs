@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace AdminToolsConsoleApp
 {
@@ -16,8 +17,14 @@ namespace AdminToolsConsoleApp
             var u = _users.GetByEmail(key);
             if (u == null) return false;
 
+            // SIGURNA VERIFIKACIJA - koristi Replace umesto Upsert
             u.IsAuthorVerified = true;
-            _users.Upsert(u);
+            
+            // Koristi direktno Replace umesto Upsert da se osiguraš da se ne gube podaci
+            var storage = Storage.GetTable("Users");
+            var updateOperation = TableOperation.Replace(u);
+            storage.Execute(updateOperation);
+            
             return true;
         }
     }
