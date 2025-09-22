@@ -52,7 +52,7 @@ namespace MovieDiscussionService.Controllers
         }
 
         // GET: Discussion
-        public async Task<ActionResult> Index(string searchTerm = "", string sortBy = "date", string genre = "")
+        public async Task<ActionResult> Index(string searchTerm = "", string sortBy = "date", string genre = "", int page = 1, int pageSize = 10)
         {
             ViewBag.Title = "Diskusije o filmovima";
             ViewBag.Message = "Lista diskusija o filmovima";
@@ -119,7 +119,7 @@ namespace MovieDiscussionService.Controllers
                             break;
                     }
                     
-                    var discussionViewModels = discussions.Select(disc => new DiscussionViewModel
+                    var allDiscussions = discussions.Select(disc => new DiscussionViewModel
                     {
                         Title = disc.MovieTitle,
                         Author = disc.CreatorEmail,
@@ -133,20 +133,45 @@ namespace MovieDiscussionService.Controllers
                         Synopsis = disc.Synopsis
                     }).ToList();
                     
-                    ViewBag.Discussions = discussionViewModels;
+                    // Paginacija
+                    var totalItems = allDiscussions.Count;
+                    var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+                    var pagedDiscussions = allDiscussions
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToList();
+                    
+                    ViewBag.Discussions = pagedDiscussions;
                     ViewBag.DataSource = "Azure Storage";
+                    ViewBag.CurrentPage = page;
+                    ViewBag.PageSize = pageSize;
+                    ViewBag.TotalPages = totalPages;
+                    ViewBag.TotalItems = totalItems;
                 }
                 else
                 {
                     // Fallback - simulirane diskusije
-                    var discussions = new List<DiscussionViewModel>
+                    var allDiscussions = new List<DiscussionViewModel>
                     {
                         new DiscussionViewModel { Title = "Najbolji filmovi 2024", Author = "marko@example.com", Date = "01.09.2024", Id = "1", Genre = "Drama", Year = 2024, ImdbRating = 8.5, Positive = 15, Negative = 2 },
                         new DiscussionViewModel { Title = "Komentari o filmu Oppenheimer", Author = "ana@example.com", Date = "31.08.2024", Id = "2", Genre = "Drama", Year = 2023, ImdbRating = 8.8, Positive = 25, Negative = 1 },
                         new DiscussionViewModel { Title = "Preporuke za horor filmove", Author = "petar@example.com", Date = "30.08.2024", Id = "3", Genre = "Horor", Year = 2024, ImdbRating = 7.2, Positive = 8, Negative = 5 }
                     };
-                    ViewBag.Discussions = discussions;
+                    
+                    // Paginacija za fallback
+                    var totalItems = allDiscussions.Count;
+                    var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+                    var pagedDiscussions = allDiscussions
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToList();
+                    
+                    ViewBag.Discussions = pagedDiscussions;
                     ViewBag.DataSource = "In-Memory (Fallback)";
+                    ViewBag.CurrentPage = page;
+                    ViewBag.PageSize = pageSize;
+                    ViewBag.TotalPages = totalPages;
+                    ViewBag.TotalItems = totalItems;
                 }
             }
             catch (Exception ex)
@@ -454,6 +479,183 @@ namespace MovieDiscussionService.Controllers
                 TempData["ErrorMessage"] = "Neispravan ID diskusije.";
             }
             return RedirectToAction("Details", new { id = discussionId });
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult> Edit(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                TempData["ErrorMessage"] = "Neispravan ID diskusije.";
+                return RedirectToAction("Index");
+            }
+
+            try
+            {
+                if (_discussionsTable != null)
+                {
+                    var retrieveOperation = TableOperation.Retrieve<DiscussionEntity>("Disc", id);
+                    var result = await _discussionsTable.ExecuteAsync(retrieveOperation);
+                    
+                    if (result.Result != null)
+                    {
+                        var discussion = result.Result as DiscussionEntity;
+                        
+                        // Proveri da li je korisnik vlasnik diskusije
+                        if (discussion.CreatorEmail != User.Identity.Name)
+                        {
+                            TempData["ErrorMessage"] = "Možete menjati samo svoje diskusije.";
+                            return RedirectToAction("Index");
+                        }
+
+                        var model = new CreateDiscussionViewModel
+                        {
+                            Title = discussion.MovieTitle,
+                            Content = discussion.Synopsis,
+                            Genre = discussion.Genre,
+                            Year = discussion.Year,
+                            ImdbRating = (decimal)discussion.ImdbRating,
+                            Duration = discussion.DurationMin,
+                            ImageUrl = discussion.PosterUrl
+                        };
+
+                        ViewBag.DiscussionId = id;
+                        return View(model);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Greška pri učitavanju diskusije: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Edit(string id, CreateDiscussionViewModel model)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                TempData["ErrorMessage"] = "Neispravan ID diskusije.";
+                return RedirectToAction("Index");
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    if (_discussionsTable != null)
+                    {
+                        var retrieveOperation = TableOperation.Retrieve<DiscussionEntity>("Disc", id);
+                        var result = await _discussionsTable.ExecuteAsync(retrieveOperation);
+                        
+                        if (result.Result != null)
+                        {
+                            var discussion = result.Result as DiscussionEntity;
+                            
+                            // Proveri da li je korisnik vlasnik diskusije
+                            if (discussion.CreatorEmail != User.Identity.Name)
+                            {
+                                TempData["ErrorMessage"] = "Možete menjati samo svoje diskusije.";
+                                return RedirectToAction("Index");
+                            }
+
+                            // Ažuriraj diskusiju
+                            discussion.MovieTitle = model.Title;
+                            discussion.Synopsis = model.Content;
+                            discussion.Genre = model.Genre ?? "Ostalo";
+                            discussion.Year = model.Year ?? 2024;
+                            discussion.ImdbRating = (double)(model.ImdbRating ?? 0);
+                            discussion.DurationMin = model.Duration ?? 0;
+                            discussion.PosterUrl = model.ImageUrl ?? "";
+
+                            var updateOperation = TableOperation.Replace(discussion);
+                            var updateResult = await _discussionsTable.ExecuteAsync(updateOperation);
+
+                            if (updateResult.HttpStatusCode >= 200 && updateResult.HttpStatusCode < 300)
+                            {
+                                TempData["SuccessMessage"] = "Diskusija je uspešno ažurirana!";
+                                return RedirectToAction("Index");
+                            }
+                            else
+                            {
+                                TempData["ErrorMessage"] = "Greška pri ažuriranju diskusije.";
+                            }
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Diskusija nije pronađena.";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TempData["ErrorMessage"] = $"Greška pri ažuriranju diskusije: {ex.Message}";
+                }
+            }
+
+            ViewBag.DiscussionId = id;
+            return View(model);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Delete(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                TempData["ErrorMessage"] = "Neispravan ID diskusije.";
+                return RedirectToAction("Index");
+            }
+
+            try
+            {
+                if (_discussionsTable != null)
+                {
+                    var retrieveOperation = TableOperation.Retrieve<DiscussionEntity>("Disc", id);
+                    var result = await _discussionsTable.ExecuteAsync(retrieveOperation);
+                    
+                    if (result.Result != null)
+                    {
+                        var discussion = result.Result as DiscussionEntity;
+                        
+                        // Proveri da li je korisnik vlasnik diskusije
+                        if (discussion.CreatorEmail != User.Identity.Name)
+                        {
+                            TempData["ErrorMessage"] = "Možete brisati samo svoje diskusije.";
+                            return RedirectToAction("Index");
+                        }
+
+                        // Obriši diskusiju
+                        var deleteOperation = TableOperation.Delete(discussion);
+                        var deleteResult = await _discussionsTable.ExecuteAsync(deleteOperation);
+
+                        if (deleteResult.HttpStatusCode >= 200 && deleteResult.HttpStatusCode < 300)
+                        {
+                            TempData["SuccessMessage"] = "Diskusija je uspešno obrisana!";
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Greška pri brisanju diskusije.";
+                        }
+                    }
+                    else
+                    {
+                        TempData["ErrorMessage"] = "Diskusija nije pronađena.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Greška pri brisanju diskusije: {ex.Message}";
+            }
+
+            return RedirectToAction("Index");
         }
 
         private async Task<bool> IsUserVerifiedAuthor(string userEmail)

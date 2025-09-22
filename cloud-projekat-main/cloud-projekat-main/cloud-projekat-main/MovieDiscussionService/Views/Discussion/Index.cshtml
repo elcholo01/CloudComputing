@@ -183,6 +183,59 @@
         }
     </div>
 
+    <!-- Pagination -->
+    @if (ViewBag.TotalPages != null && ViewBag.TotalPages > 1)
+    {
+        <nav aria-label="Paginacija diskusija" class="mt-4">
+            <ul class="pagination justify-content-center">
+                @{
+                    int currentPage = ViewBag.CurrentPage ?? 1;
+                    int totalPages = ViewBag.TotalPages ?? 1;
+                    int startPage = Math.Max(1, currentPage - 2);
+                    int endPage = Math.Min(totalPages, currentPage + 2);
+                }
+                
+                <!-- Previous button -->
+                @if (currentPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="@Url.Action("Index", new { searchTerm = ViewBag.SearchTerm, sortBy = ViewBag.SortBy, genre = ViewBag.Genre, page = currentPage - 1, pageSize = ViewBag.PageSize })">
+                            ← Prethodna
+                        </a>
+                    </li>
+                }
+                
+                <!-- Page numbers -->
+                @for (int i = startPage; i <= endPage; i++)
+                {
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { searchTerm = ViewBag.SearchTerm, sortBy = ViewBag.SortBy, genre = ViewBag.Genre, page = i, pageSize = ViewBag.PageSize })">
+                            @i
+                        </a>
+                    </li>
+                }
+                
+                <!-- Next button -->
+                @if (currentPage < totalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="@Url.Action("Index", new { searchTerm = ViewBag.SearchTerm, sortBy = ViewBag.SortBy, genre = ViewBag.Genre, page = currentPage + 1, pageSize = ViewBag.PageSize })">
+                            Sledeća →
+                        </a>
+                    </li>
+                }
+            </ul>
+        </nav>
+        
+        <!-- Pagination info -->
+        <div class="text-center text-muted mt-2">
+            <small>
+                Prikazano @((currentPage - 1) * (ViewBag.PageSize ?? 10) + 1) - @(Math.Min(currentPage * (ViewBag.PageSize ?? 10), ViewBag.TotalItems ?? 0)) 
+                od @(ViewBag.TotalItems ?? 0) diskusija
+            </small>
+        </div>
+    }
+
     <!-- Navigation -->
     <div class="text-center mt-4">
         <a href="@Url.Action("Index", "Home")" class="btn btn-secondary btn-lg">← Nazad na početnu</a>

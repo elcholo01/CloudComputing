@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Text;
+using Common;
 
 namespace HealthMonitoringService
 {
@@ -19,6 +20,7 @@ namespace HealthMonitoringService
         private CloudTable _healthCheckTable;
         private CloudTable _alertEmailsTable;
         private HttpClient _httpClient;
+        private IEmailSender _emailSender;
 
         public void Run()
         {
@@ -57,6 +59,15 @@ namespace HealthMonitoringService
             // HTTP client for health checks
             _httpClient = new HttpClient();
             _httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+            // Email sender za alert-ove
+            var smtpHost = System.Configuration.ConfigurationManager.AppSettings["SmtpHost"] ?? "smtp.gmail.com";
+            var smtpPort = int.Parse(System.Configuration.ConfigurationManager.AppSettings["SmtpPort"] ?? "587");
+            var smtpUser = System.Configuration.ConfigurationManager.AppSettings["SmtpUser"] ?? "your-email@gmail.com";
+            var smtpPass = System.Configuration.ConfigurationManager.AppSettings["SmtpPass"] ?? "your-app-password";
+            var fromEmail = System.Configuration.ConfigurationManager.AppSettings["FromEmail"] ?? "your-email@gmail.com";
+
+            _emailSender = new SMTPEmailSender(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail);
 
             Trace.TraceInformation("HealthMonitoringService has been started");
 
@@ -147,10 +158,26 @@ namespace HealthMonitoringService
 
                 if (alertEmails.Any())
                 {
-                    // Ovde bi trebalo implementirati slanje email-a
-                    // Za sada samo logujemo
-                    Trace.TraceWarning($"ALERT: {message}");
-                    Trace.TraceWarning($"Trebalo bi poslati email na: {string.Join(", ", alertEmails.Select(e => e.Email))}");
+                    var subject = $"ALERT: {serviceName} nije dostupan";
+                    var body = $"Servis: {serviceName}\n" +
+                              $"Vreme: {DateTime.UtcNow:dd.MM.yyyy HH:mm:ss} UTC\n" +
+                              $"Poruka: {message}\n\n" +
+                              $"Molimo proverite status servisa.";
+
+                    var recipients = alertEmails.Select(e => e.Email).ToList();
+                    
+                    try
+                    {
+                        await _emailSender.SendAsync(recipients, subject, body);
+                        Trace.TraceInformation($"Alert email poslat na {recipients.Count} adresa za servis {serviceName}");
+                    }
+                    catch (Exception emailEx)
+                    {
+                        Trace.TraceError($"Greška prilikom slanja email-a: {emailEx.Message}");
+                        // Fallback - samo loguj
+                        Trace.TraceWarning($"ALERT: {message}");
+                        Trace.TraceWarning($"Trebalo bi poslati email na: {string.Join(", ", recipients)}");
+                    }
                 }
                 else
                 {
@@ -198,6 +225,73 @@ namespace HealthMonitoringService
         }
 
         public AlertEmailEntity() { }
+    }
+
+    public class SMTPEmailSender : IEmailSender
+    {
+        private readonly string _smtpHost;
+        private readonly int _smtpPort;
+        private readonly string _smtpUser;
+        private readonly string _smtpPass;
+        private readonly string _fromEmail;
+
+        public SMTPEmailSender(string smtpHost, int smtpPort, string smtpUser, string smtpPass, string fromEmail)
+        {
+            _smtpHost = smtpHost;
+            _smtpPort = smtpPort;
+            _smtpUser = smtpUser;
+            _smtpPass = smtpPass;
+            _fromEmail = fromEmail;
+        }
+
+        public async Task SendAsync(IEnumerable<string> recipients, string subject, string body)
+        {
+            if (recipients == null || !recipients.Any())
+            {
+                throw new ArgumentException("Lista primalaca ne može biti prazna.");
+            }
+
+            try
+            {
+                using (var client = new System.Net.Mail.SmtpClient(_smtpHost, _smtpPort))
+                {
+                    client.UseDefaultCredentials = false;
+                    client.Credentials = new System.Net.NetworkCredential(_smtpUser, _smtpPass);
+                    client.EnableSsl = true;
+                    client.Timeout = 30000; // 30 sekundi timeout
+
+                    var mailMessage = new System.Net.Mail.MailMessage
+                    {
+                        From = new System.Net.Mail.MailAddress(_fromEmail),
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = false
+                    };
+
+                    // Dodaj sve primaoce
+                    foreach (var recipient in recipients.Where(r => !string.IsNullOrWhiteSpace(r)))
+                    {
+                        mailMessage.To.Add(recipient);
+                    }
+
+                    await client.SendMailAsync(mailMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Greška prilikom slanja emaila: {ex.Message}", ex);
+            }
+        }
+
+        public async Task SendAsync(string recipient, string subject, string body)
+        {
+            if (string.IsNullOrWhiteSpace(recipient))
+            {
+                throw new ArgumentException("Primalac ne može biti prazan.");
+            }
+
+            await SendAsync(new[] { recipient }, subject, body);
+        }
     }
 }
 
