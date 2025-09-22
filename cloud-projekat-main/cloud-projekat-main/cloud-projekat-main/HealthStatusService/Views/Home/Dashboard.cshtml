@@ -8,6 +8,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>@ViewBag.Title</title>
     <style>
         body {
@@ -107,7 +108,7 @@
         .status-not-ok {
             background: #dc3545;
         }
-        @keyframes pulse {
+        @@keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
@@ -187,21 +188,51 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏥 Health Status Dashboard</h1>
+            <h1>&#x1F3E5; Health Status Dashboard</h1>
             <div class="subtitle">Monitoring dostupnosti Movie Discussion Forum servisa</div>
         </div>
+
+        @if (ViewBag.DataSource != null)
+        {
+            <div class="time-range">
+                <strong>📊 Izvor podataka:</strong> @ViewBag.DataSource
+            </div>
+        }
+
+        @if (ViewBag.Diagnostics != null)
+        {
+            <div style="background: #e7f3ff; border: 1px solid #b8daff; color: #004085; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h4>🔧 Debug informacije</h4>
+                <pre style="font-size: 12px; background: #f8f9fa; padding: 10px; border-radius: 5px; white-space: pre-wrap;">@ViewBag.Diagnostics</pre>
+            </div>
+        }
+
+        @if (ViewBag.Warning != null)
+        {
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h4>⚠️ Upozorenje</h4>
+                <p>@ViewBag.Warning</p>
+            </div>
+        }
 
         @if (ViewBag.Error != null)
         {
             <div class="error">
-                <h3>❌ Greška</h3>
+                <h3>❌ Greska</h3>
                 <p>@ViewBag.Error</p>
+                @if (ViewBag.StackTrace != null)
+                {
+                    <details style="margin-top: 10px;">
+                        <summary>Stack Trace (za debug)</summary>
+                        <pre style="font-size: 12px; background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto;">@ViewBag.StackTrace</pre>
+                    </details>
+                }
             </div>
         }
         else
         {
             <div class="time-range">
-                <strong>📅 Vremenski opseg:</strong> @Model.TimeRange
+                <strong>&#x1F4C5; Vremenski opseg:</strong> @Model.TimeRange
             </div>
 
             <div class="overall-stats">
@@ -219,7 +250,7 @@
                 </div>
             </div>
 
-            <h2>📊 Status servisa</h2>
+            <h2>&#x1F4CA; Status servisa</h2>
             <div class="service-grid">
                 @foreach (var service in Model.ServiceStats)
                 {
@@ -245,11 +276,11 @@
                             </div>
                             <div class="service-stat">
                                 <div class="service-stat-number">@service.SuccessfulChecks</div>
-                                <div class="service-stat-label">Uspešne</div>
+                                <div class="service-stat-label">Uspesne</div>
                             </div>
                             <div class="service-stat">
                                 <div class="service-stat-number">@service.FailedChecks</div>
-                                <div class="service-stat-label">Neuspešne</div>
+                                <div class="service-stat-label">Neuspesne</div>
                             </div>
                         </div>
                         
@@ -263,16 +294,84 @@
         }
 
         <div style="text-align: center; margin-top: 30px;">
-            <a href="/" class="btn">🏠 Početna stranica</a>
+            <a href="/" class="btn">🏠 Pocetna stranica</a>
             <a href="/Home/GetHealthData" class="btn">📡 API podaci</a>
-            <button onclick="location.reload()" class="btn">🔄 Osveži</button>
+            <button onclick="refreshDashboard()" class="btn" id="refreshBtn">🔄 Osvezi</button>
+            <button onclick="toggleAutoRefresh()" class="btn" id="autoRefreshBtn">⏯️ Auto osvezavanje</button>
         </div>
 
         <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 10px; text-align: center; font-size: 14px; color: #666;">
-            <p><strong>🎯 Za odbranu:</strong> Ovaj dashboard prikazuje real-time status svih servisa</p>
-            <p><strong>🚀 Cloud Computing Projekat</strong> - Health Monitoring System</p>
-            <p><strong>⏰ Poslednje ažuriranje:</strong> @DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss")</p>
+            <p><strong>&#x1F3AF;</strong> Ovaj dashboard prikazuje real-time status svih servisa</p>
+            <p><strong>&#x1F680; Cloud Computing Projekat</strong> - Health Monitoring System</p>
+            <p><strong>⏰ Poslednje azuriranje:</strong> <span id="lastUpdate">@DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss")</span></p>
+            <p id="autoRefreshStatus" style="font-size: 12px; color: #999; margin-top: 10px;"></p>
         </div>
     </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let isAutoRefreshActive = false;
+
+        function refreshDashboard() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const originalText = refreshBtn.innerHTML;
+
+            refreshBtn.innerHTML = '⏳ Osvezavam...';
+            refreshBtn.disabled = true;
+
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('sr-Latn-RS');
+
+            // Reload the page
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            const status = document.getElementById('autoRefreshStatus');
+
+            if (isAutoRefreshActive) {
+                // Stop auto refresh
+                clearInterval(autoRefreshInterval);
+                isAutoRefreshActive = false;
+                btn.innerHTML = '▶️ Pokreni auto osvezavanje';
+                btn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                status.textContent = '';
+            } else {
+                // Start auto refresh
+                isAutoRefreshActive = true;
+                btn.innerHTML = '⏸️ Zaustavi auto osvezavanje';
+                btn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+
+                let countdown = 30;
+                updateCountdown();
+
+                autoRefreshInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        refreshDashboard();
+                    } else {
+                        updateCountdown();
+                    }
+                }, 1000);
+
+                function updateCountdown() {
+                    if (isAutoRefreshActive) {
+                        status.textContent = `Sledece osvezavanje za ${countdown} sekundi`;
+                    }
+                }
+            }
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            document.getElementById('autoRefreshStatus').textContent = '';
+        };
+    </script>
 </body>
 </html>
+
+
+
