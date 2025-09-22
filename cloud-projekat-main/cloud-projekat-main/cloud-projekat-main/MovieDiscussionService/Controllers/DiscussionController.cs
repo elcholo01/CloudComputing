@@ -8,6 +8,9 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.WindowsAzure.Storage.Queue;
 using MovieDiscussionService.Models;
+using System.Net.Mail;
+using System.Net;
+using System.Configuration;
 
 namespace MovieDiscussionService.Controllers
 {
@@ -18,10 +21,12 @@ namespace MovieDiscussionService.Controllers
         private CloudTable _discussionsTable;
         private CloudQueueClient _queueClient;
         private CloudQueue _notificationsQueue;
+        private EmailNotificationService _emailService;
 
         public DiscussionController()
         {
             InitializeStorage();
+            _emailService = new EmailNotificationService();
         }
 
         private void InitializeStorage()
@@ -399,7 +404,33 @@ namespace MovieDiscussionService.Controllers
                         var message = new Microsoft.WindowsAzure.Storage.Queue.CloudQueueMessage(Newtonsoft.Json.JsonConvert.SerializeObject(queueMessage));
                         await _notificationsQueue.AddMessageAsync(message);
 
-                        TempData["SuccessMessage"] = "Komentar je uspešno dodat!";
+                        // POŠALJI EMAIL NOTIFIKACIJU ADMINU
+                        try
+                        {
+                            // Dobij title diskusije
+                            var discussionRetrieveOperation = TableOperation.Retrieve<DiscussionEntity>("Discussion", discussionId);
+                            var discussionResult = await _discussionsTable.ExecuteAsync(discussionRetrieveOperation);
+                            var discussionTitle = "Nepoznata diskusija";
+
+                            if (discussionResult.Result is DiscussionEntity discussion)
+                            {
+                                discussionTitle = discussion.MovieTitle ?? "Nepoznata diskusija";
+                            }
+
+                            // Pošalji email notifikaciju
+                            await _emailService.SendCommentNotificationAsync(
+                                discussionTitle,
+                                comment.AuthorEmail,
+                                commentText
+                            );
+                        }
+                        catch (Exception emailEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"📧 Email notifikacija nije poslata: {emailEx.Message}");
+                            // Ne prekidaj proces dodavanja komentara
+                        }
+
+                        TempData["SuccessMessage"] = "Komentar je uspešno dodat i email notifikacija poslata adminu!";
                     }
                     else
                     {
@@ -810,5 +841,75 @@ namespace MovieDiscussionService.Controllers
         public int Negative { get; set; }
         public string Synopsis { get; set; }
         public string CreatorEmail { get; set; }
+    }
+
+    // SMTP Email sender za notifikacije komentara
+    public class EmailNotificationService
+    {
+        private readonly string _smtpHost;
+        private readonly int _smtpPort;
+        private readonly string _smtpUser;
+        private readonly string _smtpPass;
+        private readonly string _fromEmail;
+        private readonly string _adminEmail;
+
+        public EmailNotificationService()
+        {
+            _smtpHost = ConfigurationManager.AppSettings["SmtpHost"] ?? "smtp.gmail.com";
+            _smtpPort = int.Parse(ConfigurationManager.AppSettings["SmtpPort"] ?? "587");
+            _smtpUser = ConfigurationManager.AppSettings["SmtpUser"] ?? "tilijarasadnik5@gmail.com";
+            _smtpPass = ConfigurationManager.AppSettings["SmtpPass"] ?? "abxasyhwapexavea";
+            _fromEmail = ConfigurationManager.AppSettings["FromEmail"] ?? "tilijarasadnik5@gmail.com";
+            _adminEmail = ConfigurationManager.AppSettings["AdminEmail"] ?? "dvdcolak@gmail.com";
+        }
+
+        public async Task SendCommentNotificationAsync(string discussionTitle, string commenterEmail, string commentText)
+        {
+            try
+            {
+                using (var client = new SmtpClient(_smtpHost, _smtpPort))
+                {
+                    client.UseDefaultCredentials = false;
+                    client.Credentials = new NetworkCredential(_smtpUser, _smtpPass);
+                    client.EnableSsl = true;
+                    client.Timeout = 30000; // 30 sekundi timeout
+
+                    var subject = $"📝 Novi komentar na diskusiju: {discussionTitle}";
+                    var body = $@"
+🎬 MOVIE DISCUSSION FORUM - Novi komentar
+
+📋 Diskusija: {discussionTitle}
+👤 Autor komentara: {commenterEmail}
+🕐 Vreme: {DateTime.Now:dd.MM.yyyy HH:mm:ss}
+
+💬 Komentar:
+{commentText}
+
+---
+🔗 Forum: http://localhost:8080
+📧 Ovo je automatska notifikacija sa Movie Discussion Forum-a.
+";
+
+                    var mailMessage = new MailMessage
+                    {
+                        From = new MailAddress(_fromEmail, "Movie Discussion Forum"),
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = false
+                    };
+
+                    // Pošalji admin-u (dvdcolak@gmail.com)
+                    mailMessage.To.Add(_adminEmail);
+
+                    await client.SendMailAsync(mailMessage);
+                    System.Diagnostics.Debug.WriteLine($"✅ Email notifikacija poslata na {_adminEmail}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Greška pri slanju email notifikacije: {ex.Message}");
+                // Ne prekidaj proces dodavanja komentara ako email ne može da se pošalje
+            }
+        }
     }
 }
