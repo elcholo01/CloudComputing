@@ -308,14 +308,51 @@ namespace MovieDiscussionService.Controllers
                     ViewBag.DataSource = "Test Data";
                 }
                 
-                // Simulirani komentari
-                var comments = new List<CommentViewModel>
+                // Učitaj komentare iz Azure Storage
+                var comments = new List<CommentViewModel>();
+
+                try
                 {
-                    new CommentViewModel { Author = "ana@example.com", Text = "Slažem se za Oppenheimer! Odličan film.", Date = "02.09.2024" },
-                    new CommentViewModel { Author = "petar@example.com", Text = "Meni se dopao i Guardians of the Galaxy Vol. 3", Date = "02.09.2024" },
-                    new CommentViewModel { Author = "milica@example.com", Text = "Preporučujem Everything Everywhere All at Once!", Date = "03.09.2024" }
-                };
-                
+                    if (_discussionsTable != null)
+                    {
+                        var commentsTable = _tableClient.GetTableReference("Comments");
+                        var commentsQuery = new TableQuery<CommentEntity>()
+                            .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, id));
+
+                        var commentsResult = await commentsTable.ExecuteQuerySegmentedAsync(commentsQuery, null);
+
+                        comments = commentsResult.Results
+                            .OrderBy(c => c.CreatedUtc)
+                            .Select(c => new CommentViewModel
+                            {
+                                Author = c.AuthorEmail,
+                                Text = c.Text,
+                                Date = c.CreatedUtc.ToString("dd.MM.yyyy HH:mm")
+                            })
+                            .ToList();
+                    }
+
+                    // Ako nema komentara iz baze, dodaj test komentare
+                    if (!comments.Any())
+                    {
+                        comments = new List<CommentViewModel>
+                        {
+                            new CommentViewModel { Author = "ana@example.com", Text = "Slažem se za Oppenheimer! Odličan film.", Date = "02.09.2024" },
+                            new CommentViewModel { Author = "petar@example.com", Text = "Meni se dopao i Guardians of the Galaxy Vol. 3", Date = "02.09.2024" },
+                            new CommentViewModel { Author = "milica@example.com", Text = "Preporučujem Everything Everywhere All at Once!", Date = "03.09.2024" }
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Greška pri učitavanju komentara: {ex.Message}");
+                    // Fallback komentari
+                    comments = new List<CommentViewModel>
+                    {
+                        new CommentViewModel { Author = "test@example.com", Text = "Test komentar (greška pri učitavanju)", Date = DateTime.Now.ToString("dd.MM.yyyy HH:mm") }
+                    };
+                }
+
                 ViewBag.Comments = comments;
             }
             catch (Exception ex)
@@ -457,7 +494,7 @@ namespace MovieDiscussionService.Controllers
                         // Kreiraj ili ažuriraj praćenje
                         var follow = new FollowEntity(discussionId, User.Identity.Name);
 
-                        var followsTable = _tableClient.GetTableReference("Follows");
+                        var followsTable = _tableClient.GetTableReference("FollowTable");
                         followsTable.CreateIfNotExists();
                         var insertOperation = TableOperation.InsertOrReplace(follow);
                         await followsTable.ExecuteAsync(insertOperation);

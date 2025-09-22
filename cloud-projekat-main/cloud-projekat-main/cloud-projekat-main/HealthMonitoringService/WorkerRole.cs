@@ -38,40 +38,55 @@ namespace HealthMonitoringService
 
         public bool OnStart()
         {
-            // Use TLS 1.2 for Service Bus connections
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            try
+            {
+                Console.WriteLine("1. Postavljanje TLS i konekcija...");
+                // Use TLS 1.2 for Service Bus connections
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-            // Set the maximum number of concurrent connections
-            ServicePointManager.DefaultConnectionLimit = 12;
+                // Set the maximum number of concurrent connections
+                ServicePointManager.DefaultConnectionLimit = 12;
 
-            // For information on handling configuration changes
-            // see the MSDN topic at https://go.microsoft.com/fwlink/?LinkId=166357.
+                Console.WriteLine("2. Povezivanje sa Azure Storage...");
+                var storageAccount = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
 
-            var storageAccount = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
+                Console.WriteLine("3. Kreiranje tabela...");
+                // Tables
+                var tableClient = storageAccount.CreateCloudTableClient();
+                _healthCheckTable = tableClient.GetTableReference("HealthCheck");
+                _alertEmailsTable = tableClient.GetTableReference("AlertEmails");
 
-            // Tables
-            var tableClient = storageAccount.CreateCloudTableClient();
-            _healthCheckTable = tableClient.GetTableReference("HealthCheck");
-            _alertEmailsTable = tableClient.GetTableReference("AlertEmails");
-            _healthCheckTable.CreateIfNotExists();
-            _alertEmailsTable.CreateIfNotExists();
+                Console.WriteLine("4. Kreiranje tabela ako ne postoje...");
+                _healthCheckTable.CreateIfNotExists();
+                _alertEmailsTable.CreateIfNotExists();
 
-            // HTTP client for health checks
-            _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(10);
+                Console.WriteLine("5. Inicijalizacija HTTP klijenta...");
+                // HTTP client for health checks
+                _httpClient = new HttpClient();
+                _httpClient.Timeout = TimeSpan.FromSeconds(10);
 
-            // Email sender za alert-ove
-            var smtpHost = System.Configuration.ConfigurationManager.AppSettings["SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(System.Configuration.ConfigurationManager.AppSettings["SmtpPort"] ?? "587");
-            var smtpUser = System.Configuration.ConfigurationManager.AppSettings["SmtpUser"] ?? "your-email@gmail.com";
-            var smtpPass = System.Configuration.ConfigurationManager.AppSettings["SmtpPass"] ?? "your-app-password";
-            var fromEmail = System.Configuration.ConfigurationManager.AppSettings["FromEmail"] ?? "your-email@gmail.com";
+                Console.WriteLine("6. Konfiguracija email servisa...");
+                // Email sender za alert-ove
+                var smtpHost = System.Configuration.ConfigurationManager.AppSettings["SmtpHost"] ?? "smtp.gmail.com";
+                var smtpPort = int.Parse(System.Configuration.ConfigurationManager.AppSettings["SmtpPort"] ?? "587");
+                var smtpUser = System.Configuration.ConfigurationManager.AppSettings["SmtpUser"] ?? "your-email@gmail.com";
+                var smtpPass = System.Configuration.ConfigurationManager.AppSettings["SmtpPass"] ?? "your-app-password";
+                var fromEmail = System.Configuration.ConfigurationManager.AppSettings["FromEmail"] ?? "your-email@gmail.com";
 
-            _emailSender = new SMTPEmailSender(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail);
+                _emailSender = new SMTPEmailSender(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail);
 
-            Trace.TraceInformation("HealthMonitoringService has been started");
+                Console.WriteLine("7. HealthMonitoringService uspešno inicijalizovan!");
+                Trace.TraceInformation("HealthMonitoringService has been started");
 
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GREŠKA u OnStart(): {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                Trace.TraceError($"Greška u OnStart(): {ex}");
+                return false;
+            }
         }
 
         public void OnStop()
@@ -193,7 +208,28 @@ namespace HealthMonitoringService
         static void Main(string[] args)
         {
             var workerRole = new WorkerRole();
-            workerRole.Run();
+
+            Console.WriteLine("Pokretanje HealthMonitoringService...");
+
+            if (workerRole.OnStart())
+            {
+                Console.WriteLine("HealthMonitoringService uspešno pokrenuti. Pritisnite bilo koji taster za zaustavljanje...");
+
+                // Pokreni u background thread da možemo da kontrolišemo
+                var runTask = Task.Run(() => workerRole.Run());
+
+                // Čekaj da korisnik pritisne taster
+                Console.ReadKey();
+
+                Console.WriteLine("Zaustavljanje servisa...");
+                workerRole.OnStop();
+            }
+            else
+            {
+                Console.WriteLine("Neuspešno pokretanje HealthMonitoringService!");
+                Console.WriteLine("Pritisnite bilo koji taster za izlaz...");
+                Console.ReadKey();
+            }
         }
     }
 

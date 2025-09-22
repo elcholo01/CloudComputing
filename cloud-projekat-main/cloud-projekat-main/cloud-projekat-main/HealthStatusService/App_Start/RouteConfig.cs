@@ -13,6 +13,13 @@ namespace HealthStatusService
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
+            // Dodaj test route
+            routes.MapRoute(
+                name: "Simple",
+                url: "test",
+                defaults: new { controller = "Simple", action = "Index" }
+            );
+
             routes.MapRoute(
                 name: "Default",
                 url: "{controller}/{action}/{id}",

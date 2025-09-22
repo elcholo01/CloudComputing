@@ -57,7 +57,6 @@
     <Compile Include="AlertEmailsTable.cs" />
     <Compile Include="AuthorVerifier.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="UserEntity.cs" />
     <Compile Include="UsersTable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

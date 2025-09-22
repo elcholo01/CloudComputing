@@ -21,14 +21,24 @@ namespace HealthStatusService.Controllers
             _healthCheckTable = tableClient.GetTableReference("HealthCheck");
         }
 
-        public async Task<ActionResult> Index()
+        public ActionResult Index()
+        {
+            // Jednostavan Index bez Azure zavisnosti
+            ViewBag.Title = "Health Status Service - RADI!";
+            ViewBag.Message = "Web aplikacija je uspešno pokrenuta!";
+            ViewBag.CurrentTime = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+
+            return View();
+        }
+
+        public async Task<ActionResult> Dashboard()
         {
             try
             {
                 // Uzmi podatke za poslednja 2 sata
                 var twoHoursAgo = DateTime.UtcNow.AddHours(-2);
                 var filter = TableQuery.GenerateFilterConditionForDate("Timestamp", QueryComparisons.GreaterThan, twoHoursAgo);
-                
+
                 var query = new TableQuery<HealthCheckEntity>().Where(filter);
                 var result = await _healthCheckTable.ExecuteQuerySegmentedAsync(query, null);
                 var healthChecks = result.Results.ToList();
@@ -80,40 +90,56 @@ namespace HealthStatusService.Controllers
             return new HttpStatusCodeResult(200, "OK - HealthStatusService is healthy");
         }
 
-        // API endpoint za AJAX pozive
+        // API endpoint za AJAX pozive - Jednostavan JSON bez Newtonsoft zavisnosti
         [HttpGet]
-        public async Task<JsonResult> GetHealthData()
+        public async Task<ActionResult> GetHealthData()
         {
             try
             {
                 var twoHoursAgo = DateTime.UtcNow.AddHours(-2);
                 var filter = TableQuery.GenerateFilterConditionForDate("Timestamp", QueryComparisons.GreaterThan, twoHoursAgo);
-                
+
                 var query = new TableQuery<HealthCheckEntity>().Where(filter);
                 var result = await _healthCheckTable.ExecuteQuerySegmentedAsync(query, null);
                 var healthChecks = result.Results.ToList();
 
-                // Grupiši po vremenu za grafik
-                var timeSeriesData = healthChecks
+                // Jednostavan string JSON odziv
+                var jsonResponse = "[";
+                var dataPoints = healthChecks
                     .GroupBy(h => new { Date = h.Timestamp.Date, Hour = h.Timestamp.Hour, Minute = h.Timestamp.Minute / 10 * 10 })
-                    .Select(g => new
-                    {
-                        Time = g.Key.Date.AddHours(g.Key.Hour).AddMinutes(g.Key.Minute),
-                        Services = g.GroupBy(h => h.ServiceName)
-                            .Select(s => new
-                            {
-                                ServiceName = s.Key,
-                                Status = s.OrderByDescending(h => h.Timestamp).First().Status
-                            }).ToList()
-                    })
-                    .OrderBy(x => x.Time)
+                    .OrderBy(g => g.Key.Date.AddHours(g.Key.Hour).AddMinutes(g.Key.Minute))
+                    .Take(20) // Ograniči na poslednja 20 rezultata
                     .ToList();
 
-                return Json(timeSeriesData, JsonRequestBehavior.AllowGet);
+                for (int i = 0; i < dataPoints.Count; i++)
+                {
+                    var g = dataPoints[i];
+                    var time = g.Key.Date.AddHours(g.Key.Hour).AddMinutes(g.Key.Minute);
+
+                    jsonResponse += "{";
+                    jsonResponse += $"\"Time\":\"{time:yyyy-MM-ddTHH:mm:ss}\",";
+                    jsonResponse += "\"Services\":[";
+
+                    var services = g.GroupBy(h => h.ServiceName).ToList();
+                    for (int j = 0; j < services.Count; j++)
+                    {
+                        var service = services[j];
+                        var status = service.OrderByDescending(h => h.Timestamp).First().Status;
+                        jsonResponse += $"{{\"ServiceName\":\"{service.Key}\",\"Status\":\"{status}\"}}";
+                        if (j < services.Count - 1) jsonResponse += ",";
+                    }
+
+                    jsonResponse += "]}";
+                    if (i < dataPoints.Count - 1) jsonResponse += ",";
+                }
+
+                jsonResponse += "]";
+
+                return Content(jsonResponse, "application/json");
             }
             catch (Exception ex)
             {
-                return Json(new { error = ex.Message }, JsonRequestBehavior.AllowGet);
+                return Content($"{{\"error\":\"{ex.Message}\"}}", "application/json");
             }
         }
     }

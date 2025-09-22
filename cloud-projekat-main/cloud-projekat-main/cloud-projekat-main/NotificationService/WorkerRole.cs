@@ -10,6 +10,8 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text;
+using System.IO;
 
 namespace NotificationService
 {
@@ -23,6 +25,7 @@ namespace NotificationService
         private CloudTable _logTable;
         private CloudTable _commentsTable;
         private IEmailSender _email;
+        private HttpListener _httpListener;
 
         public void Run()
         {
@@ -75,7 +78,15 @@ namespace NotificationService
 
             _email = new SMTPEmailSender(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail);
 
-            Trace.TraceInformation("NotificationService has been started");
+            // Setup HTTP listener for health monitoring
+            _httpListener = new HttpListener();
+            _httpListener.Prefixes.Add("http://localhost:8081/");
+            _httpListener.Start();
+
+            // Start health monitoring endpoint in background
+            Task.Run(() => HandleHealthMonitoringRequests());
+
+            Trace.TraceInformation("NotificationService has been started with health monitoring on port 8081");
 
             return true;
         }
@@ -86,6 +97,9 @@ namespace NotificationService
 
             this.cancellationTokenSource.Cancel();
             this.runCompleteEvent.WaitOne();
+
+            _httpListener?.Stop();
+            _httpListener?.Close();
 
             Trace.TraceInformation("NotificationService has stopped");
         }
@@ -166,9 +180,50 @@ namespace NotificationService
             }
         }
 
+        private async Task HandleHealthMonitoringRequests()
+        {
+            while (_httpListener.IsListening)
+            {
+                try
+                {
+                    var context = await _httpListener.GetContextAsync();
+                    var request = context.Request;
+                    var response = context.Response;
+
+                    if (request.Url.AbsolutePath == "/health-monitoring" && request.HttpMethod == "GET")
+                    {
+                        response.StatusCode = 200;
+                        response.ContentType = "text/plain";
+
+                        byte[] buffer = Encoding.UTF8.GetBytes("OK - NotificationService is healthy");
+                        response.ContentLength64 = buffer.Length;
+
+                        using (var output = response.OutputStream)
+                        {
+                            output.Write(buffer, 0, buffer.Length);
+                        }
+                    }
+                    else
+                    {
+                        response.StatusCode = 404;
+                        response.Close();
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError($"Health monitoring error: {ex.Message}");
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
             var workerRole = new WorkerRole();
+            workerRole.OnStart();
             workerRole.Run();
         }
     }

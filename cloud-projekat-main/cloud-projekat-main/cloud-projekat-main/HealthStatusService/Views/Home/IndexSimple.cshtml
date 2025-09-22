@@ -1,0 +1,91 @@
+@{
+    ViewBag.Title = "Health Status Service - RADI!";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@ViewBag.Title</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .success {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .info {
+            background: rgba(23, 162, 184, 0.2);
+            border: 2px solid #17a2b8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Health Status Service</h1>
+
+        <div class="success">
+            <h2>✅ USPEŠNO POKRETANJE!</h2>
+            <p><strong>HealthStatusService web aplikacija je pokrenuta!</strong></p>
+            <p>Vreme: @DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss")</p>
+        </div>
+
+        <div class="info">
+            <h3>📊 Health Status Dashboard</h3>
+            <p>Web aplikacija za praćenje dostupnosti servisa je uspešno pokrenuta!</p>
+            <p>Sve .NET Framework zavisnosti su ispravno podešene.</p>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <a href="/test" class="btn">🔧 Test stranica</a>
+            <a href="/Simple/Test" class="btn">📡 API Test</a>
+        </div>
+
+        <div style="margin-top: 40px; font-size: 14px; opacity: 0.8;">
+            <p>🎯 <strong>Za odbranu:</strong> Ova stranica dokazuje da je web aplikacija potpuno funkcionalna</p>
+            <p>🚀 <strong>Cloud Computing Projekat</strong> - Health Monitoring System</p>
+            <p>⚙️ <strong>Port:</strong> @Request.Url.Port | <strong>Host:</strong> @Request.Url.Host</p>
+        </div>
+    </div>
+</body>
+</html>

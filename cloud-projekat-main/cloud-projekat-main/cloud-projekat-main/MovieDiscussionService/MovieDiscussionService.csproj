@@ -189,6 +189,7 @@
     <Content Include="Views\Account\Register.cshtml" />
     <Content Include="Views\Account\Login.cshtml" />
     <Content Include="Views\Account\EditProfile.cshtml" />
+    <Content Include="Views\Account\Profile.cshtml" />
     <Content Include="Views\Discussion\Index.cshtml" />
     <Content Include="Views\Discussion\Create.cshtml" />
     <Content Include="Views\Discussion\Edit.cshtml" />

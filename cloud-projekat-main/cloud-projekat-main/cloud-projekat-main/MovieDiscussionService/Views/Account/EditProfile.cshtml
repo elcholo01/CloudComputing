@@ -1,4 +1,4 @@
-﻿@model MovieDiscussionService.Controllers.EditProfileViewModel
+@model MovieDiscussionService.Controllers.EditProfileViewModel
 @{
     ViewBag.Title = "Izmena profila";
 }
@@ -9,28 +9,28 @@
             <div class="card shadow-lg" style="border-radius: 15px;">
                 <div class="card-header text-center" style="background: linear-gradient(45deg, #007bff, #0056b3); color: white; border-radius: 15px 15px 0 0;">
                     <h3>✏️ Izmena profila</h3>
-                    <small>Ažuriranje podataka u Azure Storage</small>
+                    <small>Azuriranje podataka u Azure Storage</small>
                 </div>
                 <div class="card-body" style="padding: 30px;">
                     @using (Html.BeginForm("EditProfile", "Account", FormMethod.Post, new { @class = "form-horizontal" }))
                     {
                         @Html.AntiForgeryToken()
-                        
+
                         @Html.ValidationSummary(true, "", new { @class = "alert alert-danger" })
 
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    @Html.LabelFor(m => m.FullName, new { @class = "form-label fw-bold" })
-                                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", @placeholder = "Marko Petrović" })
+                                    <label class="form-label fw-bold">👤 Ime i prezime:</label>
+                                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", @placeholder = "Marko Petrovic" })
                                     @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    @Html.LabelFor(m => m.Gender, new { @class = "form-label fw-bold" })
-                                    @Html.DropDownListFor(m => m.Gender, new SelectList(new[] { 
-                                        "Muški", "Ženski", "Ostalo" 
+                                    <label class="form-label fw-bold">⚧️ Pol:</label>
+                                    @Html.DropDownListFor(m => m.Gender, new SelectList(new[] {
+                                        "Muski", "Zenski", "Ostalo"
                                     }, Model.Gender), "-- Izaberite pol --", new { @class = "form-control" })
                                     @Html.ValidationMessageFor(m => m.Gender, "", new { @class = "text-danger" })
                                 </div>
@@ -40,21 +40,21 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group mb-3">
-                                    @Html.LabelFor(m => m.Country, new { @class = "form-label fw-bold" })
+                                    <label class="form-label fw-bold">🌍 Drzava:</label>
                                     @Html.TextBoxFor(m => m.Country, new { @class = "form-control", @placeholder = "Srbija" })
                                     @Html.ValidationMessageFor(m => m.Country, "", new { @class = "text-danger" })
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-3">
-                                    @Html.LabelFor(m => m.City, new { @class = "form-label fw-bold" })
+                                    <label class="form-label fw-bold">🏙️ Grad:</label>
                                     @Html.TextBoxFor(m => m.City, new { @class = "form-control", @placeholder = "Beograd" })
                                     @Html.ValidationMessageFor(m => m.City, "", new { @class = "text-danger" })
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-3">
-                                    @Html.LabelFor(m => m.Address, new { @class = "form-label fw-bold" })
+                                    <label class="form-label fw-bold">🏠 Adresa:</label>
                                     @Html.TextBoxFor(m => m.Address, new { @class = "form-control", @placeholder = "Knez Mihailova 1" })
                                     @Html.ValidationMessageFor(m => m.Address, "", new { @class = "text-danger" })
                                 </div>
@@ -62,28 +62,28 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            @Html.LabelFor(m => m.PhotoUrl, new { @class = "form-label fw-bold" })
+                            <label class="form-label fw-bold">📷 URL slike profila:</label>
                             @Html.TextBoxFor(m => m.PhotoUrl, new { @class = "form-control", @placeholder = "https://example.com/avatar.jpg" })
-                            <small class="form-text text-muted">Opcionalno - URL do vaše profilne slike</small>
+                            <small class="form-text text-muted">Opcionalno - URL do vase profilne slike</small>
                         </div>
 
-                        @if (ViewBag.Error != null)
+                        if (ViewBag.Error != null)
                         {
                             <div class="alert alert-danger">
-                                <strong>Greška:</strong> @ViewBag.Error
+                                <strong>Greska:</strong> @ViewBag.Error
                             </div>
                         }
 
                         <div class="alert alert-info">
-                            <strong>💾 Azure Storage:</strong> Izmene će biti sačuvane u Azure Table Storage.
+                            <strong>☁️ Azure Storage:</strong> Izmene ce biti sacuvane u Azure Table Storage.
                         </div>
 
                         <div class="form-group text-center mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg me-3" style="border-radius: 25px; padding: 12px 30px;">
-                                💾 Sačuvaj izmene
+                            <button type="submit" class="btn btn-success btn-lg me-3" style="border-radius: 25px; padding: 12px 30px;">
+                                💾 Sacuvaj izmene
                             </button>
                             <a href="@Url.Action("Profile", "Account")" class="btn btn-secondary btn-lg" style="border-radius: 25px; padding: 12px 30px;">
-                                ← Otkaži
+                                ❌ Otkazi
                             </a>
                         </div>
                     }
@@ -94,15 +94,24 @@
 </div>
 
 <style>
-    .form-control:focus { 
-        border-color: #007bff; 
-        box-shadow: 0 0 5px rgba(0,123,255,0.3); 
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0,123,255,0.3);
     }
-    .btn:hover { 
+    .btn:hover {
         transform: translateY(-1px);
         transition: all 0.3s;
     }
     .card-body {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    .form-label {
+        color: #495057;
+        font-size: 1em;
+        margin-bottom: 8px;
+    }
+    .alert {
+        border-radius: 10px;
+        margin: 15px 0;
     }
 </style>
